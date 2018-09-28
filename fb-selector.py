@@ -28,10 +28,10 @@ of employees of a specified department or organization
 # chosen query for target requests
 query = """
 select distinct
-        p.name ||' '|| p.firstname ||' '|| p.secondname as name,
-        p.tableno,
-        c.cardno,
-        c.sitecode
+        p.tableno as tn,
+	p.name ||' '|| p.firstname ||' '|| p.secondname as fio,        
+        c.sitecode||c.cardno as card_code
+        
 from
         person p
 JOIN dictvals d on
