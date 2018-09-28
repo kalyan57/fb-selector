@@ -1,0 +1,52 @@
+﻿# select employees of a department
+select p.name, p.firstname, p.secondname, p.tableno from person p, dictvals d
+where d.attributeval like "%department%"
+and d.dictvalid = p.depid;
+
+
+
+#select departments of an org:
+select d.attributeval, d.dictvalid from dictvals d, dictvalrel dr where
+dr.dvparent = 24 and
+dr.dvchild = d.dictvalid;
+
+
+# Department QUERY (org query will be with d.dictvalid = p.orgid conjunction):
+"""
+select distinct
+    p.name ||' '|| p.firstname ||' '|| p.secondname as name,
+    p.tableno,
+    c.cardno,
+    c.sitecode
+from
+    person p,
+    dictvals d,
+    pass, 
+    card c
+where
+    d.attributeval like "%!!!Department_name_here!!!%"
+and d.dictvalid = p.depid
+and pass.personid = p.personid
+and c.cardid = pass.cardid
+and c.cardstatus = 1
+"""
+
+"""
+#THE SAME QUERY, alternatively written
+select distinct
+    p.name ||' '|| p.firstname ||' '|| p.secondname as name,
+    p.tableno,
+    c.cardno,
+    c.sitecode
+from
+    person p
+JOIN dictvals d on
+    d.dictvalid = p.depid
+JOIN pass on
+    pass.personid = p.personid
+JOIN card c on
+    c.cardid = pass.cardid
+where
+    d.attributeval like "%!!!Department_name_here!!!%"
+and c.cardstatus = 1
+"""
