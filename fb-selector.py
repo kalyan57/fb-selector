@@ -30,7 +30,7 @@ query = """
 select distinct
         p.tableno as tn,
 	p.name ||' '|| p.firstname ||' '|| p.secondname as fio,        
-        c.sitecode||c.cardno as card_code
+        c.sitecode as sc, c.cardno as cn
         
 from
         person p
@@ -68,6 +68,29 @@ def prepquery(a,q):
 	
 	return q % (join_condition, name)
 
+
+def zerolize_n_merge(_df):
+	# - adds meaningless zeroes and brings sitecode and cardno to
+	# necessary length
+	# - merges sitecode and cardno
+	
+	# convert target fields to string data type
+	_df['SC'] = _df['SC'].astype(str)
+	_df['CN'] = _df['CN'].astype(str)
+	
+	# add zeroes to fit necessary length
+	for index, row in _df.iterrows():
+		row['SC'] = row['SC'].rjust(3, '0')
+		row['CN'] = row['CN'].rjust(5, '0')
+		
+	# merge (concatenate) sitecode and cardno in card_code column
+	_df['card_code'] = _df['SC'].str.cat(_df['CN'])
+	
+	# remove sitecode and cardno columns
+	_df = _df.drop(columns=['SC','CN'])
+		
+	return _df
+
 	
 def query_and_save(q, o_file):
 	# connect to database
@@ -75,8 +98,11 @@ def query_and_save(q, o_file):
 	
 	# read SQL query right into dataframe 
 	df = pd.read_sql_query(q, con)
+	# <<<<<zerolize sicode and cardno and merge them here
+	findf = zerolize_n_merge(df)
+	#findf = df
 	out = pd.ExcelWriter(o_file)
-	df.to_excel(out)
+	findf.to_excel(out)
 	out.save()
 	
 	#close
