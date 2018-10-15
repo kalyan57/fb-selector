@@ -1,7 +1,9 @@
 ﻿# firebird-selector
 #
-#REQUIREMENTS:
+# REQUIREMENTS:
 # pip install fdb pandas xlwt argparse pywin32
+# Firebird 2.5 client MUST be installed, fdb lib is relying on it
+
 
 # -*- coding: utf-8 -*-
 
@@ -45,8 +47,6 @@ where
         and c.cardstatus = 1
 """
 
-
-
 	
 def connectdb():
 	return fdb.connect(
@@ -57,31 +57,42 @@ def connectdb():
 		charset = 'WIN1251'
 		)
 
-		
-def prepquery(a,q):
-	if a.dep is None:
-		join_condition = 'd.dictvalid = p.orgid'
-		name = a.org
-	else:
-		join_condition = 'd.dictvalid = p.depid'
-		name= a.dep
-	
-	return q % (join_condition, name)
 
-	
-def query_and_save(q, o_file):
+def get_data(jc, names, query):
 	# connect to database
 	con = connectdb()
+	# init empty DF for result
+	result = pd.DataFrame
+	# select data for each name and add this data to the resulting DF
+	for name in names:
+		q = query % (jc, name)
+		print ("QUERY: \n", q)
+		# read SQL query right into dataframe 
+		df = pd.read_sql_query(q, con)
+		if result.empty: 
+			result = df
+		else:
+			result = result.append(df, ignore_index = True)
 	
-	# read SQL query right into dataframe 
-	df = pd.read_sql_query(q, con)
-	out = pd.ExcelWriter(o_file)
-	df.to_excel(out)
+	con.close
+	return result
+			
+
+def save_data(out_df, f):
+	out = pd.ExcelWriter(f)
+	out_df.to_excel(out)
 	out.save()
 	
-	#close
-	con.close()
-	out.close()
+			
+def collect_and_save (a, q):
+	# get clause of joining tables depending on dep OR org were submitted
+	if a.dep is None :
+		data = get_data('d.dictvalid = p.orgid', a.org, q)
+	else:
+		data = get_data('d.dictvalid = p.depid', a.dep, q)
+	#save collected data to output file
+	save_data(data, a.out)
+	
 
 def autofit(o_file):
 	#Excel cell width autofit
@@ -103,8 +114,8 @@ def autofit(o_file):
 ####################   Reading Arguments   #####################		
 parser = argparse.ArgumentParser(description=desc)
 group = parser.add_mutually_exclusive_group()
-group.add_argument('-d', '--depatrment', dest='dep', help='Submit department name')
-group.add_argument('-o', '--organization', dest='org',	help='Submit organization name')
+group.add_argument('-d', '--depatrment', dest='dep', nargs='+', help='Submit department name')
+group.add_argument('-o', '--organization', dest='org', nargs='+', help='Submit organization name')
 parser.add_argument('-out', '--output', dest='out', default='out.xls',
 					help='Submit output Excel file name. (default is out.xls)')
 args = parser.parse_args()
@@ -116,10 +127,7 @@ if args.dep is None and args.org is None:
 	# exit script - none of department or organization were submitted
 	sys.exit("None of department or organization were submitted - nothing to do. Read help -h")	
 else:
-	q = prepquery(args, query)
-	print ("QUERY: \n", q)
-	query_and_save(q, args.out)
+	collect_and_save(args, query)
 	autofit(args.out)
-	
 
 #######################   Script BODY   ########################
